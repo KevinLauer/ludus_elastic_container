@@ -53,10 +53,15 @@
   args:
     executable: /bin/bash
 
-- name: Check that the enrollment_token was created
+- name: Check that the enrollment_token_detect was created
   ansible.builtin.stat:
-    path: "{{ ludus_elastic_container_install_path }}/enrollment_token.txt"
-  register: enrollment_token_exists
+    path: "{{ ludus_elastic_container_install_path }}/enrollment_token_detect.txt"
+  register: enrollment_token_detect_exists
+
+- name: Check that the enrollment_token_prevent was created
+  ansible.builtin.stat:
+    path: "{{ ludus_elastic_container_install_path }}/enrollment_token_prevent.txt"
+  register: enrollment_token_prevent_exists
 
 - name: Only install if containers are unhealthy or token is missing
   ansible.builtin.include_tasks:
@@ -64,4 +69,5 @@
   when: |-
     not elastic_container_installed.stat.exists
     or docker_health_check.stdout | trim | length > 0
-    or not enrollment_token_exists.stat.exists
+    or not enrollment_token_detect_exists.stat.exists
+    or not enrollment_token_prevent_exists.stat.exists

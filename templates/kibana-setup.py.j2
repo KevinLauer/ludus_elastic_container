@@ -62,7 +62,7 @@ def get_latestversion_of_integration(integration_name):
         print(f"Failed to retrieve latest Defend version. Status code: {response.status_code}, Response: {response.text}")
         return None
 
-def get_enrollment_token():
+def get_enrollment_token(policy_id):
     # Define the URL for the Fleet's enrollment API
     url = f"{KIBANA_URL}{{ kibana_enrollment_endpoint }}"
 
@@ -93,12 +93,14 @@ def get_enrollment_token():
     if response.status_code == 200:
         print("Enrollment token retrieved successfully.")
         data = response.json()
-        # Assuming the first key is the one we want
-        if data and 'items' in data and len(data['items']) > 0:
-            return data['items'][0]['api_key']
-        else:
-            print("No enrollment token found.")
-            return None
+        # Filter the data to find the API key matching the given policy_id
+        if data and 'list' in data:
+            for item in data['list']:
+                if item.get('policy_id') == policy_id:
+                    return item['api_key']
+        
+        print(f"No enrollment token found for policy_id: {policy_id}")
+        return None
     else:
         print(f"Failed to retrieve enrollment token. Status code: {response.status_code}, Response: {response.text}")
         return None
@@ -258,7 +260,7 @@ def get_policy_by_integration_id():
         print("Something went wrong", err)
         print("Request details:", err.request)
 
-def post_agent_policy():
+def post_agent_policy(name):
     url = f'{KIBANA_URL}/api/fleet/agent_policies?sys_monitoring=true'
     headers = {
         'Accept': '*/*',
@@ -268,7 +270,7 @@ def post_agent_policy():
         'kbn-xsrf': 'true', # Required for POST requests
     }
     data = {
-        "name": "Ludus-Agent-Policy",
+        "name": name,
         "description": "",
         "namespace": "default",
         "monitoring_enabled": ["logs", "metrics"],
@@ -286,7 +288,7 @@ def post_agent_policy():
             print(f"Response content: {err.response.content}")
         return None
 
-def add_windows_integration(policy_id, package_version):
+def add_windows_integration(name, policy_id, package_version):
     url = f'{KIBANA_URL}/api/fleet/package_policies'
     headers = {
         'Accept': '*/*',
@@ -300,7 +302,7 @@ def add_windows_integration(policy_id, package_version):
             "name": "windows",
             "version": package_version
         },
-        "name": "windows-1",
+        "name": name,
         "namespace": "default",
         "description": "",
         "policy_id": policy_id,
@@ -426,7 +428,7 @@ def add_windows_integration(policy_id, package_version):
     response = requests.post(url, headers=headers, data=json.dumps(data), auth=(ELASTIC_USER, ELASTIC_PASSWORD), verify=False)
     return response
 
-def add_defend_integration(policy_id, package_version):
+def add_defend_integration(name, policy_id, package_version):
     url = f'{KIBANA_URL}/api/fleet/package_policies'
     headers = {
         'Accept': '*/*',
@@ -436,7 +438,7 @@ def add_defend_integration(policy_id, package_version):
         'kbn-xsrf': 'true',
     }
     data = {
-        "name": "elastic-defend-1",
+        "name": name,
         "description": "",
         "namespace": "default",
         "policy_id": policy_id,
@@ -473,7 +475,7 @@ def add_defend_integration(policy_id, package_version):
         print(f"Error adding Defend integration: {err}")
         return None
 
-def update_defend_integration(integration_id, manifest_data, policy_id, package_version):
+def update_defend_integration(name, mode, blocklist, integration_id, manifest_data, policy_id, package_version):
     url = f'{KIBANA_URL}/api/fleet/package_policies/{integration_id}'
     headers = {
         'Accept': '*/*',
@@ -483,7 +485,7 @@ def update_defend_integration(integration_id, manifest_data, policy_id, package_
         'kbn-xsrf': 'true',
     }
     data = {
-        "name": "elastic-defend-1",
+        "name": name,
         "namespace": "default",
         "description": "",
         "policy_id": policy_id,
@@ -517,19 +519,19 @@ def update_defend_integration(integration_id, manifest_data, policy_id, package_
                                     "security": True
                                 },
                                 "malware": {
-                                    "mode": "detect",
-                                    "blocklist": False
+                                    "mode": mode,
+                                    "blocklist": blocklist
                                 },
                                 "ransomware": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "supported": True
                                 },
                                 "memory_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "supported": True
                                 },
                                 "behavior_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "reputation_service": True,
                                     "supported": True
                                 },
@@ -570,16 +572,16 @@ def update_defend_integration(integration_id, manifest_data, policy_id, package_
                                     "network": True
                                 },
                                 "malware": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "blocklist": True
                                 },
                                 "behavior_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "reputation_service": False,
                                     "supported": True
                                 },
                                 "memory_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "supported": True
                                 },
                                 "popup": {
@@ -612,16 +614,16 @@ def update_defend_integration(integration_id, manifest_data, policy_id, package_
                                     "tty_io": False
                                 },
                                 "malware": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "blocklist": True
                                 },
                                 "behavior_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "reputation_service": False,
                                     "supported": True
                                 },
                                 "memory_protection": {
-                                    "mode": "detect",
+                                    "mode": mode,
                                     "supported": True
                                 },
                                 "popup": {
@@ -688,7 +690,8 @@ def load_prebuilt_rules():
         print("Request details:", err.request)
 
 if __name__ == "__main__":
-    agent_policy_res = post_agent_policy()
+    # Create Detection Agent
+    agent_policy_res = post_agent_policy("Detect Policy")
     if agent_policy_res is None:
         print("Failed to create agent policy.")
         exit(1)
@@ -710,7 +713,7 @@ if __name__ == "__main__":
     
     print(f"Going to add Elastic Defend integration v{ELASTIC_ENDPOINT_VERSION}")
     
-    integration_res = add_defend_integration(agent_policy_id, ELASTIC_ENDPOINT_VERSION)
+    integration_res = add_defend_integration("elastic-defend-detect", agent_policy_id, ELASTIC_ENDPOINT_VERSION)
     if integration_res is None:
         print("Failed to add Defend integration.")
         exit(1)
@@ -719,7 +722,7 @@ if __name__ == "__main__":
     integration_res = integration_res.json()
     defend_id = integration_res['item']['id']
     manifest_data = integration_res['item']['inputs'][0]['config']['artifact_manifest']
-    update_defend = update_defend_integration(defend_id, manifest_data, agent_policy_id, ELASTIC_ENDPOINT_VERSION)
+    update_defend = update_defend_integration("elastic-defend-detect", "detect", False, defend_id, manifest_data, agent_policy_id, ELASTIC_ENDPOINT_VERSION)
     if update_defend is None:
         print("Failed to update Defend integration.")
         exit(1)
@@ -731,23 +734,70 @@ if __name__ == "__main__":
 
     print(f"Going to add Windows integration v{ELASTIC_WINDOWS_VERSION}")
     
-    windows_response = add_windows_integration(agent_policy_id, ELASTIC_WINDOWS_VERSION)
+    windows_response = add_windows_integration("windows-detect", agent_policy_id, ELASTIC_WINDOWS_VERSION)
     if windows_response is None:
         print("Failed to add Windows integration.")
         exit(1)
     print(f'Windows Integration Created: {windows_response.status_code}')
+
+    enrollment_token = get_enrollment_token(agent_policy_id)
+    if enrollment_token is None:
+        print("Failed to get enrollment token.")
+        exit(1)
+    print(f'Enrollment Token: {enrollment_token}')
+
+    with open('enrollment_token_detect.txt', 'w') as f:
+        f.write(enrollment_token)
+
+    # Create Blocking Agent
+    agent_policy_res = post_agent_policy("Blocking Policy")
+    if agent_policy_res is None:
+        print("Failed to create agent policy.")
+        exit(1)
+
+    print("Agent Policy Response:", json.dumps(agent_policy_res, indent=2))
+
+    if 'item' not in agent_policy_res:
+        print("Unexpected response structure from post_agent_policy()")
+        exit(1)
+
+    policy_name = agent_policy_res['item']['name']
+    print(f'Agent Policy Created: {policy_name}')
+    
+    agent_policy_id = agent_policy_res['item']['id']
+    
+    integration_res = add_defend_integration("elastic-defend-block", agent_policy_id, ELASTIC_ENDPOINT_VERSION)
+    if integration_res is None:
+        print("Failed to add Defend integration.")
+        exit(1)
+    print(f'Defend Integration Created: {integration_res.status_code}')
+
+    integration_res = integration_res.json()
+    defend_id = integration_res['item']['id']
+    manifest_data = integration_res['item']['inputs'][0]['config']['artifact_manifest']
+    update_defend = update_defend_integration("elastic-defend-block", "prevent", True, defend_id, manifest_data, agent_policy_id, ELASTIC_ENDPOINT_VERSION)
+    if update_defend is None:
+        print("Failed to update Defend integration.")
+        exit(1)
+    print(f'Defend Integration Updated: {update_defend.status_code}')
+    
+    windows_response = add_windows_integration("windows-block", agent_policy_id, ELASTIC_WINDOWS_VERSION)
+    if windows_response is None:
+        print("Failed to add Windows integration.")
+        exit(1)
+    print(f'Windows Integration Created: {windows_response.status_code}')
+
+    enrollment_token = get_enrollment_token(agent_policy_id)
+    if enrollment_token is None:
+        print("Failed to get enrollment token.")
+        exit(1)
+    print(f'Enrollment Token: {enrollment_token}')
+
+    with open('enrollment_token_prevent.txt', 'w') as f:
+        f.write(enrollment_token)
 
     fleet_server_host = create_fleet_server_host()
     if fleet_server_host is None:
         print("Failed to create Fleet Server host.")
         exit(1)
     print(f'Fleet Server Host Created: {fleet_server_host}')
-
-    enrollment_token = get_enrollment_token()
-    if enrollment_token is None:
-        print("Failed to get enrollment token.")
-        exit(1)
-    print(f'Enrollment Token: {enrollment_token}')
-
-    with open('enrollment_token.txt', 'w') as f:
-        f.write(enrollment_token)

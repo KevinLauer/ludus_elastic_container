@@ -19,7 +19,7 @@ Available variables are listed below, along with default values (see `defaults/m
 
     ludus_elastic_container_install_path: /opt/elastic_container
     ludus_elastic_password: "elasticpassword"
-    ludus_elastic_stack_version: "9.0.1"
+    ludus_elastic_stack_version: "9.3.0"
     ludus_elastic_container_branch: HEAD
 
 ## Dependencies
@@ -33,7 +33,7 @@ Available variables are listed below, along with default values (see `defaults/m
 ```yaml
 - hosts: elastic-server
   roles:
-    - badsectorlabs.ludus_elastic_container
+    - ludus_elastic_container
 ```
 
 ## Example Ludus Range Config
@@ -52,38 +52,18 @@ ludus:
       snapshot: false
       block_internet: false
     roles:
-      - badsectorlabs.ludus_elastic_container
+      - ludus_elastic_container
     role_vars:
       ludus_elastic_password: "hellofromtheotherside"
+      ludus_elastic_stack_version: "9.3.0"
 ```
 
-Set the `role_vars` to install Elastic v8.X:
-```yaml
-ludus:
-  - vm_name: "{{ range_id }}-elastic-server"
-    hostname: "{{ range_id }}-elastic-server"
-    template: debian-12-x64-server-template
-    vlan: 20
-    ip_last_octet: 2
-    ram_gb: 8
-    cpus: 4
-    linux: true
-    testing:
-      snapshot: false
-      block_internet: false
-    roles:
-      - badsectorlabs.ludus_elastic_container
-    role_vars:
-      ludus_elastic_password: "hellofromtheotherside"
-      ludus_elastic_stack_version: "8.12.2"
-      ludus_elastic_container_branch: 05c0b91a36a0918d095c28295a9c64a9def275f5 # Known good commit, 2024-07-03
-```
 
 ## Ludus setup
 
 ```
 # Add the role to your ludus host
-ludus ansible roles add badsectorlabs.ludus_elastic_container
+ludus ansible roles add -d <path to ludus_elastic_container>
 
 # Get your config into a file so you can assign to a VM
 ludus range config get > config.yml

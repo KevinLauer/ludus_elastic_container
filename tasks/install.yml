@@ -193,8 +193,13 @@
 
 - name: Get the elastic token
   ansible.builtin.slurp:
-    path: "{{ ludus_elastic_container_install_path }}/enrollment_token.txt"
-  register: token_slurp
+    path: "{{ ludus_elastic_container_install_path }}/enrollment_token_detect.txt"
+  register: token_slurp_detect
+
+- name: Get the elastic token
+  ansible.builtin.slurp:
+    path: "{{ ludus_elastic_container_install_path }}/enrollment_token_prevent.txt"
+  register: token_slurp_prevent
 
 - name: Output the kibana-setup.py output
   ansible.builtin.debug:
@@ -204,4 +209,5 @@
   ansible.builtin.debug:
     msg: |
       Elastic Container Project is up and running. Access it at https://{{ ansible_host }}:5601 Access with: elastic:{{ ludus_elastic_password }}
-      To add agents, use the token: {{ token_slurp['content'] | b64decode }}
+      To add detection agents, use the token: {{ token_slurp_detect['content'] | b64decode }}
+      To add blocking agents, use the token: {{ token_slurp_prevent['content'] | b64decode }}

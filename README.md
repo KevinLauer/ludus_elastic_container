@@ -2,12 +2,12 @@
 
 An Ansible role that runs [Elastic Container](https://github.com/peasead/elastic-container) on a Linux system.
 
-- Creates an agent policy
+- Creates two agent policies (detect and prevent)
 - Add 2 integrations to the policy (Elastic Defend and Windows)
 - Configures one (1) Fleet server
 - Downloads the compatible agent version and drops it inside the ludus host (`/opt/ludus/resources/elastic`) for "offline" agent installations.
 - Reconfigures the output elasticsearch URL to be an array of the ipv4 address of this elastic server
-- Writes the enrollment token to `{{ ludus_elastic_container_install_path }}/enrollment_token.txt`. With this token and the IP address assigned to the elastic server, you are ready to [deploy agents](https://github.com/badsectorlabs/ludus_elastic_agent).
+- Writes the enrollment tokens to `{{ ludus_elastic_container_install_path }}/enrollment_token_<detect or prevent>.txt`. With this token and the IP address assigned to the elastic server, you are ready to [deploy agents](https://github.com/badsectorlabs/ludus_elastic_agent).
 
 ## Requirements
 

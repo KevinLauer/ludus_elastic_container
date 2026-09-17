@@ -7,7 +7,9 @@ An Ansible role that runs [Elastic Container](https://github.com/peasead/elastic
 - Configures one (1) Fleet server
 - Downloads the compatible agent version and drops it inside the ludus host (`/opt/ludus/resources/elastic`) for "offline" agent installations.
 - Reconfigures the output elasticsearch URL to be an array of the ipv4 address of this elastic server
-- Writes the enrollment tokens to `{{ ludus_elastic_container_install_path }}/enrollment_token_<detect or prevent>.txt`. With this token and the IP address assigned to the elastic server, you are ready to [deploy agents](https://github.com/badsectorlabs/ludus_elastic_agent).
+- Writes the enrollment tokens to `{{ ludus_elastic_container_install_path }}/enrollment_token_<detect or prevent>.txt`. With this token and the IP address assigned to the elastic server, you are ready to [deploy agents](https://github.com/KevinLauer/ludus_elastic_agent).
+
+This fork is [KevinLauer/ludus_elastic_container](https://github.com/KevinLauer/ludus_elastic_container). Upstream is [badsectorlabs/ludus_elastic_container](https://github.com/badsectorlabs/ludus_elastic_container).
 
 ## Requirements
 
@@ -17,10 +19,14 @@ None.
 
 Available variables are listed below, along with default values (see `defaults/main.yml`):
 
-    ludus_elastic_container_install_path: /opt/elastic_container
-    ludus_elastic_password: "elasticpassword"
-    ludus_elastic_stack_version: "9.3.0"
-    ludus_elastic_container_branch: HEAD
+```yaml
+ludus_elastic_container_install_path: /opt/elastic_container
+ludus_elastic_password: elasticpassword
+ludus_elastic_stack_version: "9.4.2"
+ludus_elastic_agent_version: "9.4.2"
+ludus_elastic_container_branch: HEAD
+ludus_elastic_license_type: "basic" # basic, trial, or platinum
+```
 
 ## Dependencies
 
@@ -55,15 +61,37 @@ ludus:
       - ludus_elastic_container
     role_vars:
       ludus_elastic_password: "hellofromtheotherside"
-      ludus_elastic_stack_version: "9.3.0"
+      ludus_elastic_stack_version: "9.4.2"
 ```
 
+Set the `role_vars` to install Elastic v8.X:
+
+```yaml
+ludus:
+  - vm_name: "{{ range_id }}-elastic-server"
+    hostname: "{{ range_id }}-elastic-server"
+    template: debian-12-x64-server-template
+    vlan: 20
+    ip_last_octet: 2
+    ram_gb: 8
+    cpus: 4
+    linux: true
+    testing:
+      snapshot: false
+      block_internet: false
+    roles:
+      - ludus_elastic_container
+    role_vars:
+      ludus_elastic_password: "hellofromtheotherside"
+      ludus_elastic_stack_version: "8.12.2"
+      ludus_elastic_container_branch: 05c0b91a36a0918d095c28295a9c64a9def275f5 # Known good commit, 2024-07-03
+```
 
 ## Ludus setup
 
 ```
-# Add the role to your ludus host
-ludus ansible roles add -d <path to ludus_elastic_container>
+git clone https://github.com/KevinLauer/ludus_elastic_container.git
+ludus ansible role add -d ./ludus_elastic_container
 
 # Get your config into a file so you can assign to a VM
 ludus range config get > config.yml
@@ -75,9 +103,12 @@ ludus range config set -f config.yml
 ludus range deploy -t user-defined-roles
 ```
 
-- Once deployed, access the kibana UI at `https://<IP>:5601`
+- The Kibana UI is at `https://<IP>:5601`
+  - In Kibana UI, you can enable your own detection rules (to trigger alerts). The Windows, Linux and MacOS detection rules are enabled by default to get the user started quickly. This is a [good reference](https://www.elastic.co/guide/en/security/current/rules-ui-management.html) on how to manage detection rules.
 
-- In Kibana UI, you can enable your own detection rules (to trigger alerts). The Windows, Linux and MacOS detection rules are enabled by default to get the user started quickly. This is a [good reference](https://www.elastic.co/guide/en/security/current/rules-ui-management.html) on how to manage detection rules.
+### Trial License
+
+By default, the role will install with a "basic" license. If you want to use a trial license, set `ludus_elastic_license_type` to `trial`. This enables more features, and lasts for 30 days. See [Elastic License Types](https://www.elastic.co/subscriptions) for more information.
 
 ## License
 
@@ -85,11 +116,11 @@ Apache-2.0
 
 ## Author Information
 
-This role was created by [Bad Sector Labs](https://badsectorlabs.com/), for [Ludus](https://ludus.cloud/).
+This role was created by [Bad Sector Labs](https://badsectorlabs.com/), for [Ludus](https://ludus.cloud/). This fork is maintained at [KevinLauer/ludus_elastic_container](https://github.com/KevinLauer/ludus_elastic_container).
 
 ## Resources/Credits
 
 - Excellent blog post from Elastic [Security Labs](https://www.elastic.co/security-labs/the-elastic-container-project)
-- This role heavily utilized this [awesome project](https://github.com/peasead/elastic-container) by @peasead
-- [Kibana Fleet API](https://www.elastic.co/guide/en/fleet/8.12/fleet-api-docs.html)
-- [Elastic Integrations](https://www.elastic.co/guide/en/security/8.12/create-defend-policy-api.html)
+- This role heavily utilized this [awesome project](https://github.com/peasead/elastic-container) by [@peasead](https://github.com/peasead)
+- [Kibana Fleet API](https://www.elastic.co/docs/reference/kibana/configuration-reference/fleet-settings)
+- [Elastic Integrations](https://www.elastic.co/integrations/data-integrations?solution=security)
